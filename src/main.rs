@@ -1,42 +1,18 @@
-use tokio::{
-    io::AsyncBufReadExt, io::AsyncWriteExt, io::BufReader, net::TcpListener, sync::broadcast,
-};
-#[tokio::main]
-async fn main() {
-    let listener = TcpListener::bind("localhost:3030").await.unwrap();
+use std::{io::Read, net::TcpStream};
 
-    let (tx, _rx) = broadcast::channel(10);
+fn main() -> std::io::Result<()> {
+    let listener = std::net::TcpListener::bind("127.0.0.1:9521")?;
 
-    loop {
-        let (mut socket, addr) = listener.accept().await.unwrap();
-
-        let tx = tx.clone();
-        let mut rx = tx.subscribe();
-        tokio::spawn(async move {
-            let (reader, mut writer) = socket.split();
-
-            let mut buffer = BufReader::new(reader);
-            let mut input_string = String::new();
-
-            loop {
-                tokio::select! {
-                    result = buffer.read_line(&mut input_string) => {
-                        if result.unwrap() == 0 {
-                            break;
-                        }
-                        tx.send((input_string.clone(), addr)).unwrap();
-                        input_string.clear();
-                    }
-                    result = rx.recv() => {
-                        let (message, other_addr) = result.unwrap();
-                        if addr != other_addr {
-                            writer.write_all(message.as_bytes()).await.unwrap();
-                        }
-                    }
-
-                }
-                input_string.clear();
-            }
-        });
+    for stream in listener.incoming() {
+        handle_client(stream)?;
     }
+
+    Ok(())
+}
+
+fn handle_client(stream: Result<TcpStream, std::io::Error>) -> Result<(), std::io::Error> {
+    let mut buffer = String::new();
+    stream?.read_to_string(&mut buffer)?;
+    println!("{buffer}");
+    Ok(())
 }
