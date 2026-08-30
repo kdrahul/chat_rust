@@ -1,0 +1,9 @@
+{
+  "join": {
+    "user": {
+      "id": "1",
+      "name": "Rahul",
+      "nick": "KD"
+    }
+  }
+}
